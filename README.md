@@ -2301,6 +2301,303 @@ spec:
 
 </details>
 
+<details>
+<summary><strong>Q26: What happens behind the scenes when you run `kubectl apply -f deployment.yaml`?</strong></summary>
+
+Here's the complete flow from command to running Pods:
+
+**1. Client Side (kubectl)**
+```
+kubectl → reads YAML → validates syntax → sends HTTP request to API Server
+```
+
+**2. API Server Processing**
+```
+Request → Authentication → Authorization (RBAC) → Admission Controllers → etcd
+```
+
+- **Authentication**: Verifies identity (certificates, tokens, etc.)
+- **Authorization**: Checks if user can perform the action (RBAC)
+- **Admission Controllers**: Mutating (modify request) → Validating (reject if invalid)
+- **Persistence**: Object stored in etcd
+
+**3. Controller Manager (Deployment Controller)**
+```
+Watches for Deployment changes → Creates/Updates ReplicaSet
+```
+
+**4. Controller Manager (ReplicaSet Controller)**
+```
+Watches for ReplicaSet changes → Creates Pod objects (status: Pending)
+```
+
+**5. Scheduler**
+```
+Watches for Pods with no node assigned → Selects best node → Updates Pod.spec.nodeName
+```
+
+Scheduling considers:
+- Resource requests (CPU, memory)
+- Node affinity/anti-affinity
+- Taints and tolerations
+- Pod topology spread constraints
+
+**6. Kubelet (on the selected node)**
+```
+Watches for Pods assigned to its node → Pulls images → Creates containers via CRI
+```
+
+**Complete Flow Diagram:**
+```
+┌─────────┐     ┌────────────┐     ┌───────┐
+│ kubectl │────▶│ API Server │────▶│ etcd  │
+└─────────┘     └─────┬──────┘     └───────┘
+                      │
+        ┌─────────────┼─────────────┐
+        ▼             ▼             ▼
+┌──────────────┐ ┌───────────┐ ┌─────────┐
+│ Deployment   │ │ ReplicaSet│ │Scheduler│
+│ Controller   │ │ Controller│ │         │
+└──────┬───────┘ └─────┬─────┘ └────┬────┘
+       │               │            │
+       ▼               ▼            ▼
+   Creates         Creates      Assigns
+   ReplicaSet      Pods         Node
+                                   │
+                      ┌────────────┘
+                      ▼
+               ┌──────────┐
+               │  Kubelet │──▶ Creates Container
+               └──────────┘
+```
+
+</details>
+
+<details>
+<summary><strong>Q27: How does the Kubernetes Scheduler decide which node to place a Pod on?</strong></summary>
+
+The scheduler uses a **two-phase process**: Filtering and Scoring.
+
+**Phase 1: Filtering (Predicates)**
+
+Eliminates nodes that cannot run the Pod:
+
+| Filter | What it checks |
+|--------|----------------|
+| `PodFitsResources` | Does node have enough CPU/memory? |
+| `PodFitsHostPorts` | Are required host ports available? |
+| `NodeSelector` | Does node match pod's nodeSelector? |
+| `NodeAffinity` | Does node satisfy affinity rules? |
+| `TaintToleration` | Can pod tolerate node's taints? |
+| `CheckVolumeBinding` | Can required volumes be bound? |
+
+**Phase 2: Scoring (Priorities)**
+
+Ranks remaining nodes (0-100 score each):
+
+| Priority | What it favors |
+|----------|----------------|
+| `LeastRequestedPriority` | Nodes with most available resources |
+| `BalancedResourceAllocation` | Even CPU/memory utilization |
+| `NodeAffinityPriority` | Preferred affinity matches |
+| `ImageLocalityPriority` | Nodes that already have container images |
+| `PodTopologySpread` | Even distribution across zones/nodes |
+
+**Final Selection:**
+```
+Final Score = Σ (Priority Score × Weight)
+Winner = Node with highest total score
+```
+
+**Example Scenario:**
+```
+Pod requests: 500m CPU, 256Mi memory
+
+Node A: 2000m free, 4Gi free → Score: 85
+Node B: 800m free, 1Gi free  → Score: 45
+Node C: 100m free, 512Mi free → FILTERED OUT (insufficient CPU)
+
+Result: Pod scheduled on Node A
+```
+
+</details>
+
+<details>
+<summary><strong>Q28: How does DNS work inside a Kubernetes cluster?</strong></summary>
+
+Kubernetes runs **CoreDNS** (or kube-dns) as a cluster add-on to provide DNS resolution.
+
+**DNS Records Created:**
+
+| Resource | DNS Format | Example |
+|----------|------------|---------|
+| Service | `<svc>.<namespace>.svc.cluster.local` | `nginx.default.svc.cluster.local` |
+| Pod | `<pod-ip-dashed>.<namespace>.pod.cluster.local` | `10-244-1-5.default.pod.cluster.local` |
+| Headless Service | `<pod-name>.<svc>.<namespace>.svc.cluster.local` | `web-0.nginx.default.svc.cluster.local` |
+
+**How Pods Resolve DNS:**
+
+1. Pod's `/etc/resolv.conf` points to CoreDNS Service IP (usually `10.96.0.10`)
+2. Pod makes DNS query → CoreDNS Pod
+3. CoreDNS resolves and returns IP
+
+**Pod's /etc/resolv.conf:**
+```
+nameserver 10.96.0.10
+search default.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+```
+
+**DNS Resolution Flow:**
+```
+┌─────────┐  DNS Query   ┌─────────┐   Lookup    ┌───────────┐
+│   Pod   │─────────────▶│ CoreDNS │────────────▶│ API Server│
+│         │◀─────────────│   Pod   │◀────────────│  (etcd)   │
+└─────────┘  IP Address  └─────────┘   Service   └───────────┘
+                                        Endpoints
+```
+
+**Headless Services (clusterIP: None):**
+- Returns Pod IPs directly instead of Service IP
+- Essential for StatefulSets where each Pod needs a stable DNS name
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  clusterIP: None  # Headless
+  selector:
+    app: nginx
+```
+
+</details>
+
+<details>
+<summary><strong>Q29: How do you debug a Pod that keeps crashing (CrashLoopBackOff)?</strong></summary>
+
+**Step-by-step debugging approach:**
+
+**1. Check Pod Status and Events**
+```bash
+kubectl describe pod <pod-name>
+# Look at: Events, State, Last State, Restart Count
+```
+
+**2. Check Container Logs**
+```bash
+# Current logs
+kubectl logs <pod-name>
+
+# Previous container (if restarted)
+kubectl logs <pod-name> --previous
+
+# Specific container in multi-container pod
+kubectl logs <pod-name> -c <container-name>
+```
+
+**3. Common Causes and Solutions**
+
+| Symptom | Likely Cause | Solution |
+|---------|--------------|----------|
+| `OOMKilled` | Out of memory | Increase memory limits |
+| Exit code `1` | Application error | Check logs, fix app |
+| Exit code `137` | SIGKILL (OOM or timeout) | Increase resources/timeout |
+| Exit code `143` | SIGTERM | Graceful shutdown issue |
+| `ImagePullBackOff` | Can't pull image | Check image name, registry auth |
+| Probe failures | Liveness/readiness failing | Adjust probe timing or endpoint |
+
+**4. Interactive Debugging**
+```bash
+# Exec into running container
+kubectl exec -it <pod-name> -- /bin/sh
+
+# If container keeps crashing, override entrypoint
+kubectl run debug --image=<image> --command -- sleep infinity
+kubectl exec -it debug -- /bin/sh
+```
+
+**5. Check Resource Constraints**
+```bash
+kubectl top pod <pod-name>
+kubectl describe node <node-name> | grep -A5 "Allocated resources"
+```
+
+**6. Debugging Checklist:**
+- [ ] Image exists and is pullable?
+- [ ] Entrypoint/CMD correct?
+- [ ] Environment variables set correctly?
+- [ ] ConfigMaps/Secrets mounted?
+- [ ] Resource limits sufficient?
+- [ ] Probes configured correctly?
+- [ ] Dependent services available?
+
+</details>
+
+<details>
+<summary><strong>Q30: What is etcd and why is it critical for Kubernetes?</strong></summary>
+
+**etcd** is a distributed, consistent key-value store that serves as Kubernetes' **single source of truth**.
+
+**What etcd Stores:**
+- All cluster state (Pods, Services, ConfigMaps, Secrets, etc.)
+- Cluster configuration
+- Service discovery data
+- Current and desired state of all resources
+
+**Why etcd is Critical:**
+
+| Aspect | Impact |
+|--------|--------|
+| **All state lives here** | If etcd fails, cluster can't function |
+| **All API calls go here** | Every kubectl command reads/writes etcd |
+| **Distributed consensus** | Uses Raft algorithm for consistency |
+| **Watch mechanism** | Controllers use watches to react to changes |
+
+**Architecture:**
+```
+┌────────────┐    ┌────────────┐    ┌────────────┐
+│   etcd-1   │◀──▶│   etcd-2   │◀──▶│   etcd-3   │
+│  (Leader)  │    │ (Follower) │    │ (Follower) │
+└─────┬──────┘    └────────────┘    └────────────┘
+      │
+      ▼
+┌────────────┐
+│ API Server │ (only talks to etcd)
+└────────────┘
+```
+
+**Key Characteristics:**
+
+- **Strongly consistent**: All reads return latest write
+- **Highly available**: Tolerates (n-1)/2 failures in n-node cluster
+- **3 nodes minimum** for production HA
+- **5 nodes** for large clusters (tolerates 2 failures)
+
+**etcd Operations:**
+```bash
+# Check etcd health
+etcdctl endpoint health
+
+# List all keys
+etcdctl get / --prefix --keys-only
+
+# Backup etcd
+etcdctl snapshot save backup.db
+
+# Restore from backup
+etcdctl snapshot restore backup.db
+```
+
+**Best Practices:**
+- Run on dedicated nodes (not with workloads)
+- Use SSD storage for low latency
+- Regular automated backups
+- Monitor etcd metrics closely
+
+</details>
+
 ---
 
 ## Infrastructure as Code (Terraform)
