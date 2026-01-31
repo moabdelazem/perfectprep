@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+type: Opaque
+stringData:
+  # In real life, use base64 encoded values or external secrets
+  mongo-root-username: "admin"
+  mongo-root-password: "password123"
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  replicas: 3
+  serviceName: "mongo-svc"
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-persistent-storage
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 1Gi
+
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - image: mongo:6.0
+          name: mongo
+          ports:
+            - containerPort: 27071
+
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-secret-username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-root-password
+
+          volumeMounts:
+            - name: mongo-persistent-storage
+              mountPath: /data/db
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc
+spec:
+  selector:
+    app: mongodb
+  clusterIP: None
+  ports:
+    - port: 27017

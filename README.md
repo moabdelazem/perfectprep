@@ -1739,7 +1739,61 @@ These three components work together to manage persistent storage in Kubernetes:
 </details>
 
 <details>
-<summary><strong>Q11: What is Ingress?</strong></summary>
+<summary><strong>Q11: What are PVC Access Modes?</strong></summary>
+
+PersistentVolumeClaims (PVCs) have access modes that define how a volume can be mounted by pods.
+
+**Access Modes:**
+
+| Mode | Abbreviation | Description |
+|------|--------------|-------------|
+| **ReadWriteOnce** | RWO | Volume can be mounted as read-write by a single node |
+| **ReadOnlyMany** | ROX | Volume can be mounted as read-only by many nodes |
+| **ReadWriteMany** | RWX | Volume can be mounted as read-write by many nodes |
+| **ReadWriteOncePod** | RWOP | Volume can be mounted as read-write by a single pod (K8s 1.22+) |
+
+**Storage Provider Support:**
+
+| Storage Type | RWO | ROX | RWX |
+|--------------|-----|-----|-----|
+| AWS EBS | Yes | No | No |
+| Azure Disk | Yes | No | No |
+| GCE Persistent Disk | Yes | No | No |
+| NFS | Yes | Yes | Yes |
+| CephFS | Yes | Yes | Yes |
+| HostPath | Yes | No | No |
+
+**Example PVC:**
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+```
+
+**When to use each mode:**
+
+- **RWO**: Single-instance databases (PostgreSQL, MySQL), stateful applications
+- **ROX**: Shared configuration files, static content served by multiple pods
+- **RWX**: Shared file storage, content management systems, build artifacts
+- **RWOP**: Strict single-pod access (ensures data integrity)
+
+**Important Notes:**
+- A volume can have multiple access modes, but can only be mounted using one mode at a time
+- Not all storage providers support all access modes
+- RWX typically requires network-attached storage (NFS, CephFS, etc.)
+
+</details>
+
+<details>
+<summary><strong>Q12: What is Ingress?</strong></summary>
 
 Ingress is a Kubernetes API object that manages external HTTP/HTTPS access to services within a cluster. It acts as a smart router that sits at the edge of your cluster.
 
