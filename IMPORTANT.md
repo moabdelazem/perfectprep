@@ -1,6 +1,6 @@
 # Important Questions From Different Topics
 
-### What is DevOps?
+### 01. What is DevOps?
 
 DevOps is a set of practices that combines software development (Dev) and IT operations (Ops). It aims to shorten the development lifecycle and deliver high-quality software continuously. Key principles include:
 
@@ -10,7 +10,7 @@ DevOps is a set of practices that combines software development (Dev) and IT ope
 - Monitoring and logging
 - Collaboration between development and operations teams
 
-### How Did We Evolve to DevOps?
+### 02. How Did We Evolve to DevOps?
 
 The evolution to DevOps happened through several stages:
 
@@ -24,7 +24,7 @@ Key drivers of this evolution:
 - Automation tools becoming more sophisticated
 - Failure of traditional approaches to handle rapid change
 
-### What is Continuous Integration (CI) and Continuous Deployment (CD)?
+### 03. What is Continuous Integration (CI) and Continuous Deployment (CD)?
 
 **Continuous Integration (CI)** is the practice of frequently merging code changes into a shared repository. Each merge triggers automated builds and tests to detect issues early.
 
@@ -36,7 +36,7 @@ Key benefits:
 - More frequent and reliable releases
 - Lower risk per deployment
 
-### What is Infrastructure as Code?
+### 04. What is Infrastructure as Code?
 
 Infrastructure as Code (IaC) is the practice of managing and provisioning infrastructure through machine-readable configuration files rather than manual processes.
 
@@ -52,7 +52,7 @@ Benefits:
 - Faster provisioning
 - Reduced human error
 
-### What is Standardization? How do Containers & Container Orchestration Help?
+### 05. What is Standardization? How do Containers & Container Orchestration Help?
 
 **Standardization** means creating consistent, repeatable environments across development, testing, and production.
 
@@ -67,7 +67,7 @@ Benefits:
 - Managing container health and self-healing
 - Handling rolling updates and rollbacks
 
-### What is Observability?
+### 06. What is Observability?
 
 Observability is the ability to understand the internal state of a system by examining its outputs. It consists of three pillars:
 
@@ -81,7 +81,7 @@ Observability enables:
 - Identifying performance bottlenecks
 - Proactive issue prevention
 
-### Can DevOps Be Done Without Cloud?
+### 07. Can DevOps Be Done Without Cloud?
 
 Yes, DevOps can be implemented without cloud infrastructure. DevOps is primarily about culture, practices, and automation, not specific technologies.
 
@@ -97,7 +97,7 @@ However, cloud provides advantages:
 - Managed services reduce operational overhead
 - Pay-as-you-go cost model
 
-### What was the Traditional Deployment Approach Before Containers?
+### 08. What was the Traditional Deployment Approach Before Containers?
 
 Before containers, applications were deployed using:
 
@@ -111,7 +111,7 @@ Problems with traditional approaches:
 - Resource waste from running full OS per app
 - Environment inconsistencies between dev/staging/prod
 
-### Can you explain the sequence of steps in creating and deploying a Container?
+### 09. Can you explain the sequence of steps in creating and deploying a Container?
 
 1. **Write Dockerfile** - Define base image, dependencies, and commands
 2. **Build Image** - `docker build -t myapp:v1 .`
@@ -120,7 +120,7 @@ Problems with traditional approaches:
 5. **Deploy to Orchestrator** - Apply Kubernetes manifest or docker-compose
 6. **Monitor** - Check logs and metrics for health
 
-### Compare Virtual Machines (VM) and Containers
+### 10. Compare Virtual Machines (VM) and Containers
 
 | Aspect | Virtual Machine | Container |
 |--------|-----------------|-----------|
@@ -131,7 +131,7 @@ Problems with traditional approaches:
 | Portability | Less portable | Highly portable |
 | Use Case | Legacy apps, full isolation | Microservices, cloud-native |
 
-### Explain Important Components in Container Architecture
+### 11. Explain Important Components in Container Architecture
 
 - **Container Runtime** - Executes containers (containerd, CRI-O, runc)
 - **Container Image** - Read-only template with app and dependencies
@@ -140,7 +140,7 @@ Problems with traditional approaches:
 - **Cgroups** - Control resource allocation (CPU, memory, I/O)
 - **Union Filesystem** - Layered file system for efficient storage
 
-### Why is Containerization important for DevOps and Microservices?
+### 12. Why is Containerization important for DevOps and Microservices?
 
 For **DevOps**:
 - Consistent environments across the pipeline
@@ -154,7 +154,7 @@ For **Microservices**:
 - Independent scaling per service
 - Fault isolation between services
 
-### What is a Dockerfile? How do you build a Docker image?
+### 13. What is a Dockerfile? How do you build a Docker image?
 
 A **Dockerfile** is a text file containing instructions to build a Docker image.
 
@@ -174,7 +174,7 @@ docker build -t myapp:v1 .
 docker build -f Dockerfile.prod -t myapp:prod .
 ```
 
-### What is a Base Image?
+### 14. What is a Base Image?
 
 A base image is the starting point for building a Docker image. It provides the foundation (OS, runtime, tools) upon which your application is layered.
 
@@ -185,7 +185,7 @@ Common base images:
 - **scratch** - Empty image for static binaries
 - **distroless** - Minimal images without shell or package manager
 
-### What is the difference between ENTRYPOINT and CMD in a Dockerfile?
+### 15. What is the difference between ENTRYPOINT and CMD in a Dockerfile?
 
 **CMD** - Default command that can be overridden at runtime
 ```dockerfile
@@ -202,7 +202,7 @@ CMD ["start"]
 
 Use **ENTRYPOINT** when the container should always run a specific executable. Use **CMD** for default arguments that users might override.
 
-### Difference between ADD and COPY in a Dockerfile
+### 16. Difference between ADD and COPY in a Dockerfile
 
 **COPY** - Simple file/directory copy
 ```dockerfile
@@ -221,7 +221,7 @@ ADD https://example.com/file.txt /app/
 
 Best practice: Use **COPY** unless you specifically need ADD's features.
 
-### How do you tag a Container image? Why is tagging important?
+### 17. How do you tag a Container image? Why is tagging important?
 
 ```bash
 docker build -t myapp:v1.0.0 .
@@ -235,7 +235,7 @@ Tagging importance:
 - **Environment mapping** - dev, staging, prod tags
 - **Immutability** - Avoid "latest" in production for reproducibility
 
-### How can you design Dockerfiles to maximize layer reuse?
+### 18. How can you design Dockerfiles to maximize layer reuse?
 
 1. **Order instructions by change frequency** - Put rarely changing instructions first
 2. **Separate dependency installation** - Copy package files before source code
@@ -253,7 +253,7 @@ COPY . .
 RUN npm install
 ```
 
-### What is a multi-stage build, and how can it be used to reduce the size of images?
+### 19. What is a multi-stage build, and how can it be used to reduce the size of images?
 
 Multi-stage builds use multiple FROM statements to separate build and runtime environments.
 
@@ -277,7 +277,7 @@ Benefits:
 - Smaller production images
 - Security (fewer packages = fewer vulnerabilities)
 
-### Is it possible to make changes to an existing Container image?
+### 20. Is it possible to make changes to an existing Container image?
 
 Yes, but not recommended:
 ```bash
@@ -291,7 +291,7 @@ Best practice: Modify the Dockerfile and rebuild. This ensures:
 - Version control of changes
 - Clean layer history
 
-### What is the purpose of the .dockerignore file?
+### 21. What is the purpose of the .dockerignore file?
 
 `.dockerignore` excludes files from the build context, similar to `.gitignore`.
 
@@ -311,7 +311,7 @@ Benefits:
 - Smaller images (excluded files won't accidentally be copied)
 - Security (prevents secrets from being included)
 
-### What Are Alternatives to Writing Dockerfile?
+### 22. What Are Alternatives to Writing Dockerfile?
 
 1. **Buildpacks** - Auto-detect and build without Dockerfile (Paketo, Heroku)
 2. **Jib** - Build Java images without Docker daemon
@@ -320,7 +320,7 @@ Benefits:
 5. **Nixpacks** - Auto-detect language and generate optimized builds
 6. **Docker Compose** - Define multi-container applications
 
-### What is OCI and Why Is It Important?
+### 23. What is OCI and Why Is It Important?
 
 **OCI (Open Container Initiative)** is an open governance structure for container standards.
 
